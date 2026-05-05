@@ -1,6 +1,6 @@
 ---
 name: git-commit
-description: 使用 conventional commit 规范提交代码。feature 分支自动 push 远端后询问是否发起 PR；master 分支需用户确认后再 push。
+description: 使用 conventional commit 规范提交代码。feature 分支自动 push 远端后询问是否发起 PR；master 分支受保护，禁止本地直接 push，只能通过 PR 合入。
 command: /git-commit
 ---
 
@@ -43,15 +43,20 @@ push 成功后询问：
 
 #### master 分支
 
-提交成功后**先警告，再询问**：
+**禁止直接 push**。提交成功后，输出提示并结束：
 
 ```
 ✓ fix(config): update timeout value
 
-当前在 master 分支，确认要 push 到远端吗？
+master 分支受保护，不允许本地直接 push。
+请切换到 feature 分支，通过 PR 将改动合入 master：
+
+  git checkout -b fix/config-timeout
+  git cherry-pick <commit>
+  /git-commit → /git-pr
 ```
 
-用户确认后执行 `git push origin master`；用户拒绝则结束，改动保留在本地。
+> master 的所有变更必须通过 PR 留痕，禁止 `git push origin master`，更不能 `--force`。
 
 ### 最佳实践
 
