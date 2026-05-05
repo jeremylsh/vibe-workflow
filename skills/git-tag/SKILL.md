@@ -1,12 +1,12 @@
 ---
 name: git-tag
-description: 线上版本验证稳定后，在 master 分支打语义化版本 tag，作为回滚基准点。
+description: 在 deploy 之前，给当前 master HEAD 打语义化版本 tag，作为本次生产发布的版本标识和 rollback 基准点。
 command: /git-tag
 ---
 
 ## Git Tag 助手
 
-本 skill 在 `/deploy` 部署完成、用户验证线上功能稳定后触发，给当前 master 打版本 tag，作为 `/rollback` 的回滚基准点。
+本 skill 在 `/git-pr` 合并后、`/deploy` 执行前触发，给当前 master HEAD 打版本 tag，**确保每次生产部署都有对应的版本号**。tag 是 `/rollback` 的回滚基准点，也是生产发布的可追溯凭证。
 
 ### Tag 格式
 
@@ -26,12 +26,13 @@ v<major>.<minor>.<patch>
 
 1. 确认当前在 master 分支（`git branch --show-current`）
 2. 确认工作区干净（`git status`）
-3. 拉取最新代码（`git pull origin master`）
+3. 拉取最新代码（`git pull origin master --ff-only`）
 4. 查看已有 tag，确定下一个版本号（`git tag --sort=-v:refname | head -10`）
-5. 向用户展示建议版本号，**等待确认**
-6. 创建带注释的 tag（`git tag -a <version> -m "<message>"`）
-7. 推送 tag 到远端（`git push origin <version>`）
-8. 确认推送成功，输出 tag 信息
+5. 检查 HEAD 是否已有 tag（`git tag --points-at HEAD`）——若已有则展示并询问是否继续
+6. 向用户展示建议版本号，**等待确认**
+7. 创建带注释的 tag（`git tag -a <version> -m "<message>"`）
+8. 推送 tag 到远端（`git push origin <version>`）
+9. 确认推送成功，输出 tag 信息
 
 ### 版本号决策规则
 
@@ -51,19 +52,28 @@ v<major>.<minor>.<patch>
 **Commit**: abc1234 feat(auth): add JWT login flow
 **时间**: 2026-05-04 10:45
 
-此版本为回滚基准点。若线上出现问题，运行 /rollback 可快速回滚到此版本。
+版本 tag 已推送到远端，现在可以运行 /deploy 将此版本部署到线上。
 ```
 
 ### 注意事项
 
 - **必须**确认在 master 分支上再打 tag
 - 推送前向用户展示版本号，确认后再执行
+- tag 只标记 commit，不修改任何分支，对 master 分支历史无影响
 - 不要在未完整合并的功能分支上打 release tag
-- 避免删除已推送的 tag，如需修正应打新 tag
+- 避免删除已推送的 tag，如需修正应打新 tag（如 v1.2.1）
+- 若部署后出现问题、需要修复后发布，新修复版本打新 tag（v1.2.1），不重打旧 tag
+
+### 标准发布顺序
+
+```
+/feat → /git-commit → /git-pr → /git-tag → /deploy
+```
 
 ### 示例触发语
 
-- "验证没问题，帮我打个 tag"
+- "/git-tag"
+- "PR 合了，打个 tag 准备发布"
 - "打一个 v1.2.0 的 tag"
 - "这次是 bug 修复，打 patch tag"
 - "新功能上线，打 minor tag"
